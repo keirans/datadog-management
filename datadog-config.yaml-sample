@@ -1,0 +1,23 @@
+---
+config:
+  backupdir: "./datadog-backups"
+  dateformat: "%F"
+
+teams:
+  Team1:
+    apikey: APIKEY
+    appkey: APPKEY
+  Team2:
+    apikey: APIKEY
+    appkey: APPKEY
+
+users:
+  adm:
+    - adminuser1@domain.com.au
+    - adminuser2@domain.com.au
+  st: 
+    - standarduser1@domain.com.au
+    - standarduser2@domain.com.au
+  ro: 
+    - readonly1@domain.com.au
+    - readonly2@domain.com.au

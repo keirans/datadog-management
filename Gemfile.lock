@@ -1,0 +1,19 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    dogapi (1.28.0)
+      multi_json
+    json (2.1.0)
+    logger (1.2.8)
+    multi_json (1.12.2)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  dogapi
+  json
+  logger
+
+BUNDLED WITH
+   1.16.0

@@ -1,0 +1,104 @@
+#!/usr/bin/env ruby
+#
+# Datadog Users CLI
+# Keiran Sweet <Keiran.Sweet@sourcedgroup.com>
+#
+# This tool provides a way to create and enforce the configuration of a particular set of 
+# Datadog team users from the command line. 
+# 
+# It functions by defining a set of users and their level of access (role) in the configuration
+# file under users: and then running the datadog-users-cli with the required arguements accordingly
+#
+# This tool uses the DatadogManagement class that provides a set of additional methods to make
+# working with the Datadog API's for these administration tasks a little easier.
+# It is effectively a wrapper around the Datadog Ruby SDK.
+#
+
+require 'date'
+require 'rubygems'
+require 'dogapi'
+require 'json'
+require 'fileutils'
+require 'getoptlong'
+require 'logger'
+require 'yaml'
+require_relative 'datadogmanagement'
+
+datadogconfig = YAML.load_file('datadog-config.yaml')
+logger = Logger.new(STDOUT)
+
+# Parse the config block in the configuration file.
+if datadogconfig.key?('config')
+  config = datadogconfig['config']
+
+  if config.key?('http_proxy')
+    #logger.info("Setting http_proxy from config file to #{config['http_proxy']}")
+    ENV['http_proxy'] = config['http_proxy']
+  end
+
+  if config.key?('https_proxy')
+    #logger.info("Setting https_proxy from config file to #{config['https_proxy']}")
+    ENV['https_proxy'] = config['https_proxy']
+  end
+
+else
+  logger.fatal("The config block is not found in the configuration file")
+  exit 1
+end
+
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--team', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--class', '-c', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+def print_usage 
+
+  puts "Datadog Backup CLI - Dump Datadog dashboards, screenboards and monitors to JSON backups"
+  puts "Usage: #{$0} --help        - Display the help message"
+  puts "Usage: #{$0} --team all --class admin    - Setup the admin users in all teams "
+  puts "Usage: #{$0} --team <name> --class admin - Setup the class of users in a specific team"
+  puts "                                           (adm, st & ro)"
+  exit 1
+
+end
+
+if ( ARGV.count < 4 ) 
+    print_usage
+end 
+
+opts.each do |opt, arg|
+  case opt
+    when '--help'
+
+      print_usage
+
+    when '--team'
+      if arg == 'all'
+
+        @teams = Hash.new
+        @teams = datadogconfig['teams']
+
+      else
+
+        @teams = Hash.new
+        @teams[arg] = datadogconfig['teams'][arg]
+
+      end
+
+    when '--class'
+
+        @role = arg
+        @users = datadogconfig['users'][arg]
+
+    end
+end
+
+@teams.keys.each do |team|
+  logger.info("=> Setting up users of role type \'#{@role}\' in Datadog team : \'#{team}\'")
+  datadog = DatadogManagement.new(
+    team,
+    datadogconfig['teams'][team]['apikey'],
+    datadogconfig['teams'][team]['appkey'])
+  datadog.configure_users(@users, @role )
+end

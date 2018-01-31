@@ -1,0 +1,111 @@
+#!/usr/bin/env ruby
+#
+# Datadog Backups CLI
+# Keiran Sweet <Keiran.Sweet@sourcedgroup.com>
+#
+# This tool provides a way to backup all the dashboards, screenboards and monitors in a
+# particular Datadog team from the command line. Each of the objects are dumped in JSON 
+# format that is suitable for submitting to the Datadog API to recreate them.
+# As such, this means that the backups can be used to restore original copies of a backup
+# but also be used to clone dashboards, screenboards and monitors across datadog teams.
+#
+# This tool uses the DatadogManagement class that provides a set of additional methods to make
+# working with the Datadog API's for these administration tasks a little easier.
+# It is effectively a wrapper around the Datadog Ruby SDK.
+#
+
+require 'date'
+require 'rubygems'
+require 'dogapi'
+require 'json'
+require 'fileutils'
+require 'getoptlong'
+require 'logger'
+require 'yaml'
+require_relative 'datadogmanagement'
+
+datadogconfig = YAML.load_file('datadog-config.yaml')
+logger = Logger.new(STDOUT)
+
+# Parse the config block in the configuration file.
+if datadogconfig.key?('config')
+  config = datadogconfig['config']
+
+  if config.key?('http_proxy')
+    #logger.info("Setting http_proxy from config file to #{config['http_proxy']}")
+    ENV['http_proxy'] = config['http_proxy']
+  end
+
+  if config.key?('https_proxy')
+    #logger.info("Setting https_proxy from config file to #{config['https_proxy']}")
+    ENV['https_proxy'] = config['https_proxy']
+  end
+
+  if config.key?('dateformat')
+    #logger.info("Setting date format from config file to #{config['dateformat']}")
+    backupdate = Time.now.strftime(config['dateformat'])
+  end
+
+  if config.key?('backupdir')
+    #logger.info("Setting backup dir from config file to #{config['backupdir']}")
+    backupdir = config['backupdir']
+  else
+    logger.fatal("backupdir not found in the configuration file")
+    exit 1
+  end
+
+else
+  logger.fatal("The config block is not found in the configuration file")
+  exit 1
+end
+
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--team', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+)
+
+def print_usage 
+
+  puts "Datadog Backup CLI - Dump Datadog dashboards, screenboards and monitors to JSON backups"
+  puts "Usage: #{$0} --help        - Display the help message"
+  puts "Usage: #{$0} --team all    - Backup all teams dashboards, screenboards and monitors"
+  puts "Usage: #{$0} --team <name> - Backup only team <name> dashboards, screenboards and monitors"
+  exit 1
+
+end
+
+if ( ARGV.count < 2 ) 
+    print_usage
+end 
+
+opts.each do |opt, arg|
+  case opt
+    when '--help'
+
+      print_usage
+
+    when '--team'
+      if arg == 'all'
+
+        @teams = Hash.new
+        @teams = datadogconfig['teams']
+
+      else
+
+        @teams = Hash.new
+        @teams[arg] = datadogconfig['teams'][arg]
+
+      end
+  end
+end
+
+@teams.keys.each do |team|
+  logger.info("=> Backing up Datadog team : \'#{team}\'")
+  datadog = DatadogManagement.new(
+    team,
+    datadogconfig['teams'][team]['apikey'],
+    datadogconfig['teams'][team]['appkey'])
+  datadog.backup_screenboards(backupdir, backupdate)
+  datadog.backup_dashboards(backupdir, backupdate)
+  datadog.backup_monitors(backupdir, backupdate)
+end
