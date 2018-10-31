@@ -17,37 +17,14 @@ require 'json'
 require 'fileutils'
 require 'getoptlong'
 require 'yaml'
-require_relative 'datadogmanagement'
+require_relative 'datadog_management'
 
-config_yaml = YAML.load_file('datadog-config.yaml')
 logger = Logger.new(STDOUT)
-
-# Parse the config block in the configuration file.
-if config_yaml.key?('config')
-  config = config_yaml['config']
-
-  if config.key?('http_proxy')
-    #logger.info("Setting http_proxy from config file to #{config['http_proxy']}")
-    ENV['http_proxy'] = config['http_proxy']
-  end
-
-  if config.key?('https_proxy')
-    #logger.info("Setting https_proxy from config file to #{config['https_proxy']}")
-    ENV['https_proxy'] = config['https_proxy']
-  end
-
-  if config.key?('dateformat')
-    #logger.info("Setting date format from config file to #{config['dateformat']}")
-    backupdate = Time.now.strftime(config['dateformat'])
-  end
-
-else
-  logger.fatal("The config block is not found in the configuration file")
-  exit 1
-end
 
 opts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  
+  [ '--config', '-c', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--team', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--object', '-o', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--file', '-f', GetoptLong::REQUIRED_ARGUMENT ],
@@ -57,52 +34,40 @@ opts = GetoptLong.new(
 def print_usage 
     puts "Datadog Restore CLI - Restore Datadog dashboards, screenboards and monitors from JSON backups"
     puts "Usage: #{$0} --help        - Display the help message"
-    puts "Usage: #{$0} --team Team1 --object dashboard --file ./dashboard.json"
-    puts "Usage: #{$0} --team Team1 --object screenboard --file ./screenboard.json"
-    puts "Usage: #{$0} --team Team1 --object monitor --file ./monitor.json"
+    puts "Usage: #{$0} [--config <yaml file>] --object {dashboard|screenboard|monitor} --file ./SomeObject.json [--altname <name>]"
     exit 1
 end
   
-if ( ARGV.count < 6 ) 
-    print_usage
-end 
+config_file = "datadog-config.yml"
 
 opts.each do |opt, arg|
   case opt
     when '--help'
-
       print_usage
 
-
-    when '--team'
-      if arg == 'all'
-
-        @teams = Hash.new
-        @teams = config_yaml['teams']
-
-      else
-
-        @teams = Hash.new
-        @teams[arg] = config_yaml['teams'][arg]
-
-      end
+    when '--config'
+      config_file = arg
 
     when '--object'
-
       @object = arg
 
     when '--file'
-
       @filename = arg
 
     when '--altname'
-
       @altname = arg
 
   end
 end
 
-@teams.keys.each do |team|
+unless @object && @filename
+    print_usage
+end 
+
+config_yaml = YAML.load_file(config_file) or abort("Could not load configuration file #{config_file}")
+
+teams = config_yaml['teams']
+teams.keys.each do |team|
 logger.info("Restoring #{@object} to team #{team} from backup file #{@filename}")
 
   datadog = DatadogManagement.new(

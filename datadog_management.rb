@@ -49,7 +49,7 @@ require 'fileutils'
 require 'logger'
 
 class DatadogManagement
-    def initialize(team, apikey, appkey, base_backup_dir, name_filter_regex = '.*')
+    def initialize(team, apikey, appkey, base_backup_dir = nil, name_filter_regex = '.*')
         @team    = team
         @appkey  = appkey
         @apikey  = apikey
