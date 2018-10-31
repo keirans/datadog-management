@@ -1,13 +1,15 @@
 ---
-config:
-  backup_dir: "./datadog-backups"
+backup:
+  dir: "./datadog-backups"
   datetime_format: "%F"
 
 teams:
   Team1:
+    name_filter_regex: "^team1-.+"
     apikey: APIKEY
     appkey: APPKEY
   Team2:
+    name_filter_regex: "^team2-.+"
     apikey: APIKEY
     appkey: APPKEY
 

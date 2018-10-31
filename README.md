@@ -25,52 +25,45 @@ Usage
 
 Configuration file structure
 ---------------------------
-The configuration file should be called `datadog-config.yaml1 and it must reside in the root directory of the cloned repo.
+The configuration file should be called `datadog-config.yaml` and it must reside in the root directory of the cloned repo.
 A sample configuration file exists as `datadog-config.yaml-sample`
 
 A Sample is also below for your reference
 
 -  Config section
-    - Global tool configuration attributes
-        - backupdir     - The directory to store the backup data
-        - dateformat    - The date format string used for storing date seperated backup files
-    - Teams section     - A hash of Teams and their corrosponding API and APP Keys to allow the tools to access the APIs of each datadog team.
-    - Users section     - A hash of hashes of Arrays of users for each type of user (Admin, Standard, Read only) that is used by the datadog-users-cli command to create and invite users across all the teams defined in the configuration file.
+    - Backup configuration attributes
+        - dir                - The directory to store the backup data
+        - datetime_format    - The date format string used for storing date separated backup files
+    - Teams section          - A hash of Teams and their corresponding API and APP Keys to allow the tools to access the APIs of each datadog team.
+    - Users section          - A hash of hashes of Arrays of users for each type of user (Admin, Standard, Read only) that is used by the datadog-users-cli command to create and invite users across all the teams defined in the configuration file.
 
 
----------------------------
+```yaml
+backup:
+  dir: "./datadog-backups"
+  datetime_format: "%F"
 
-    ---
-    config:
-        https_proxy: http://hostname:8080
-        http_proxy: http://hostname:8080
-        backupdir: "./datadog-backups"
-        dateformat: "%F"
-    teams:
-        Team1:
-            apikey: APIKEY
-            appkey: APPKEY
-        Team2:
-            apikey: APIKEY
-            appkey: APPKEY
-        Team3:
-            apikey: APIKEY
-            appkey: APPKEY
-        Team4:
-            apikey: APIKEY
-            appkey: APPKEY
-    users:
-        adm:
-            - adminuser1@domain.com.au
-        st: 
-            - standarduser1@domain.com.au
-            - standarduser2@domain.com.au
-        ro: 
-            - readonly1@domain.com.au
-            - readonly2@domain.com.au
-            - readonly3@domain.com.au
+teams:
+  Team1:
+    name_filter_regex: "^team1-.+"
+    apikey: APIKEY
+    appkey: APPKEY
+  Team2:
+    name_filter_regex: "^team2-.+"
+    apikey: APIKEY
+    appkey: APPKEY
 
-
+users:
+  adm:
+    - adminuser1@domain.com.au
+    - adminuser2@domain.com.au
+  st: 
+    - standarduser1@domain.com.au
+    - standarduser2@domain.com.au
+  ro: 
+    - readonly1@domain.com.au
+    - readonly2@domain.com.au
+```
 
 Example Usages
 ---------------------------
