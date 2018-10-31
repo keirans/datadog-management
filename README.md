@@ -25,14 +25,13 @@ Usage
 
 Configuration file structure
 ---------------------------
-The configuration file should be called 'datadog-config.yaml' and it must reside in the root directory of the cloned repo.
-A sample configuration file exists as datadog-config.yaml-sample
+The configuration file should be called `datadog-config.yaml1 and it must reside in the root directory of the cloned repo.
+A sample configuration file exists as `datadog-config.yaml-sample`
 
 A Sample is also below for your reference
 
 -  Config section
     - Global tool configuration attributes
-        - http_proxy / https_proxy - If a Proxy is required for outbound accces - Place them here, remove if not required
         - backupdir     - The directory to store the backup data
         - dateformat    - The date format string used for storing date seperated backup files
     - Teams section     - A hash of Teams and their corrosponding API and APP Keys to allow the tools to access the APIs of each datadog team.

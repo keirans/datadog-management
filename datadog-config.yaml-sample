@@ -1,7 +1,7 @@
 ---
 config:
-  backupdir: "./datadog-backups"
-  dateformat: "%F"
+  backup_dir: "./datadog-backups"
+  datetime_format: "%F"
 
 teams:
   Team1:

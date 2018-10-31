@@ -24,38 +24,23 @@ require 'logger'
 require 'yaml'
 require_relative 'datadogmanagement'
 
-datadogconfig = YAML.load_file('datadog-config.yaml')
+config_yaml = YAML.load_file('datadog-config.yaml')
 logger = Logger.new(STDOUT)
 
 # Parse the config block in the configuration file.
-if datadogconfig.key?('config')
-  config = datadogconfig['config']
+backup_config = config_yaml['backup']
+unless backup_config
+  logger.fatal("The 'backup' block is not found in the configuration file")
+  exit 1
+end
 
-  if config.key?('http_proxy')
-    #logger.info("Setting http_proxy from config file to #{config['http_proxy']}")
-    ENV['http_proxy'] = config['http_proxy']
-  end
+if backup_config.key?('dateformat_format')
+  backup_time = Time.now.strftime(backup_config['datetime_format'])
+end
 
-  if config.key?('https_proxy')
-    #logger.info("Setting https_proxy from config file to #{config['https_proxy']}")
-    ENV['https_proxy'] = config['https_proxy']
-  end
-
-  if config.key?('dateformat')
-    #logger.info("Setting date format from config file to #{config['dateformat']}")
-    backupdate = Time.now.strftime(config['dateformat'])
-  end
-
-  if config.key?('backupdir')
-    #logger.info("Setting backup dir from config file to #{config['backupdir']}")
-    backupdir = config['backupdir']
-  else
-    logger.fatal("backupdir not found in the configuration file")
-    exit 1
-  end
-
-else
-  logger.fatal("The config block is not found in the configuration file")
+backup_dir = backup_config['dir']
+unless backup_dir
+  logger.fatal("backup.dir not found in the configuration file")
   exit 1
 end
 
@@ -75,37 +60,44 @@ def print_usage
 end
 
 if ( ARGV.count < 2 ) 
-    print_usage
+  print_usage
 end 
 
 opts.each do |opt, arg|
   case opt
-    when '--help'
+  when '--help'
 
-      print_usage
+    print_usage
 
-    when '--team'
-      if arg == 'all'
+  when '--team'
+    if arg == 'all'
 
-        @teams = Hash.new
-        @teams = datadogconfig['teams']
+      @teams = Hash.new
+      @teams = config_yaml['teams']
 
-      else
+    else
 
-        @teams = Hash.new
-        @teams[arg] = datadogconfig['teams'][arg]
+      @teams = Hash.new
+      @teams[arg] = config_yaml['teams'][arg]
 
-      end
+    end
   end
 end
 
 @teams.keys.each do |team|
   logger.info("=> Backing up Datadog team : \'#{team}\'")
+
+  team_config = config_yaml['teams'][team]
+  team_backup_dir = File.join(backup_dir, team, backup_time || "")
+  name_filter_regex = Regexp.new(team_config['name_filter_regex'])
+
   datadog = DatadogManagement.new(
     team,
-    datadogconfig['teams'][team]['apikey'],
-    datadogconfig['teams'][team]['appkey'])
-  datadog.backup_screenboards(backupdir, backupdate)
-  datadog.backup_dashboards(backupdir, backupdate)
-  datadog.backup_monitors(backupdir, backupdate)
+    team_config['apikey'],
+    team_config['appkey'],
+    team_backup_dir,
+    name_filter_regex)
+  datadog.backup_screenboards()
+  datadog.backup_dashboards()
+  datadog.backup_monitors()
 end

@@ -1,2 +1,7 @@
+.bundle/
+.idea/
+vendor/
+
 datadog-config.yaml
 datadog-backups/
+/datadog-management.iml

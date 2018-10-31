@@ -19,12 +19,12 @@ require 'getoptlong'
 require 'yaml'
 require_relative 'datadogmanagement'
 
-datadogconfig = YAML.load_file('datadog-config.yaml')
+config_yaml = YAML.load_file('datadog-config.yaml')
 logger = Logger.new(STDOUT)
 
 # Parse the config block in the configuration file.
-if datadogconfig.key?('config')
-  config = datadogconfig['config']
+if config_yaml.key?('config')
+  config = config_yaml['config']
 
   if config.key?('http_proxy')
     #logger.info("Setting http_proxy from config file to #{config['http_proxy']}")
@@ -78,12 +78,12 @@ opts.each do |opt, arg|
       if arg == 'all'
 
         @teams = Hash.new
-        @teams = datadogconfig['teams']
+        @teams = config_yaml['teams']
 
       else
 
         @teams = Hash.new
-        @teams[arg] = datadogconfig['teams'][arg]
+        @teams[arg] = config_yaml['teams'][arg]
 
       end
 
@@ -107,8 +107,8 @@ logger.info("Restoring #{@object} to team #{team} from backup file #{@filename}"
 
   datadog = DatadogManagement.new(
     team,
-    datadogconfig['teams'][team]['apikey'],
-    datadogconfig['teams'][team]['appkey'])
+    config_yaml['teams'][team]['apikey'],
+    config_yaml['teams'][team]['appkey'])
 
   payload = JSON.parse(File.read(@filename))
 

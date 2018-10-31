@@ -49,67 +49,70 @@ require 'fileutils'
 require 'logger'
 
 class DatadogManagement
-    def initialize(team, apikey, appkey)
+    def initialize(team, apikey, appkey, base_backup_dir, name_filter_regex = '.*')
         @team    = team
         @appkey  = appkey
         @apikey  = apikey
+        @base_backup_dir = base_backup_dir
+        @name_filter_regex = name_filter_regex
         @dog = Dogapi::Client.new(@apikey, @appkey)
         @logger = Logger.new(STDOUT)
     end
 
     def status
-        @logger.debug("Datadog management conneciton status")
+        @logger.debug("Datadog management connection status")
         @logger.debug("The status for #{@team}")
         @logger.debug("Application Key: #{@appkey}")
         @logger.debug("API Key: #{@apikey}")
         @logger.debug("")
     end
 
-    def backup_screenboards(backupdir, backupdate)
-        @logger.info("Backing up screenboards for team \'#{@team}\'")
+    def backup_screenboards()
+        @logger.info("Backing up screenboards for team \'#{@team}\' matching #{@name_filter_regex.to_s}")
         @screenboards = @dog.get_all_screenboards[1]['screenboards']
-        @screenboards.each do | screenboard |
+        backup_dir = File.join(@base_backup_dir, 'screenboards')
+        FileUtils.mkdir_p(backup_dir)
+        @screenboards.
+          select { |screenboard| (screenboard['title'] || '').match?(@name_filter_regex) }. 
+          each do |screenboard|
             @logger.info("  Processing \'#{screenboard['title']}\'")
             filename = "#{screenboard['title'].gsub(/[\/]/, '_')}.json"
-            backup_path = "#{backupdir}/#{@team}/#{backupdate}/screenboards/"
-            backup_full_path = "#{backupdir}/#{@team}/#{backupdate}/screenboards/#{filename}"
-
-            @logger.info("    Backup file \'#{backup_full_path}\'")
-            FileUtils.mkdir_p(backup_path)
+            backup_file_path = "#{backup_dir}/#{filename}"
+            @logger.info("  Backing up \'#{screenboard['title']}\' to #{backup_file_path}")
             content = JSON.pretty_generate(@dog.get_screenboard(screenboard['id'])[1])
-            File.write(backup_full_path, content)
+            File.write(backup_file_path, content)
         end
     end
 
-    def backup_dashboards(backupdir, backupdate)
-        @logger.info("Backing up dashboards for team \'#{@team}\'")
+    def backup_dashboards()
+        @logger.info("Backing up dashboards for team \'#{@team}\' matching #{@name_filter_regex.to_s}")
         dashboards = @dog.get_dashboards[1]['dashes']
-        dashboards.each do | dashboard |
+        backup_dir = File.join(@base_backup_dir, 'dashboards')
+        FileUtils.mkdir_p(backup_dir)
+        dashboards.
+          select { |dashboard| (dashboard['title'] || '').match?(@name_filter_regex) }. 
+          each do |dashboard|
             filename = "#{dashboard['title'].gsub(/[\/]/, '_')}.json"
-            backup_path = "#{backupdir}/#{@team}/#{backupdate}/dashboards/"
-            backup_full_path = "#{backup_path}/#{filename}"
-
-            @logger.info("  Processing \'#{dashboard['title']}\'")
-            @logger.info("    Backup file  \'#{backup_full_path}\'")
-            FileUtils.mkdir_p(backup_path)
+            backup_file_path = "#{backup_dir}/#{filename}"
+            @logger.info("  Backing up \'#{dashboard['title']}\' to #{backup_file_path}")
             content = JSON.pretty_generate(@dog.get_dashboard(dashboard['id'])[1])
-            File.write(backup_full_path, content)
+            File.write(backup_file_path, content)
         end
     end
 
-    def backup_monitors(backupdir, backupdate)
-        @logger.info("Backing up monitors for team \'#{@team}\''")
+    def backup_monitors()
+        @logger.info("Backing up monitors for team \'#{@team}\' matching #{@name_filter_regex.to_s}")
         monitors = @dog.get_all_monitors[1]
-        monitors.each do | monitor |
+        backup_dir = File.join(@base_backup_dir, 'monitors')
+        FileUtils.mkdir_p(backup_dir)
+        monitors.
+          select { |monitor| (monitor['name'] || '').match?(@name_filter_regex) }. 
+          each do |monitor|
             filename = "#{monitor['name'].gsub(/[\/]/, '_')}.json"
-            backup_path = "#{backupdir}/#{@team}/#{backupdate}/monitors/"
-            backup_full_path = "#{backup_path}/#{filename}"
-
-            @logger.info("  Processing \'#{monitor['name']}\'")
-            @logger.info("    Backup file #{backup_full_path}")
-            FileUtils.mkdir_p(backup_path)
+            backup_file_path = "#{backup_dir}/#{filename}"
+            @logger.info("  Backing up \'#{monitor['name']}\' to #{backup_file_path}")
             content = JSON.pretty_generate(@dog.get_monitor(monitor['id'])[1])
-            File.write(backup_full_path, content)
+            File.write(backup_file_path, content)
         end
     end
 
