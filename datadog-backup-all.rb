@@ -26,47 +26,41 @@ require_relative 'datadog_management'
 
 logger = Logger.new(STDOUT)
 
-opts = GetoptLong.new(
-  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-  [ '--config', '-c', GetoptLong::REQUIRED_ARGUMENT ]
-)
+abort("DD_API_KEY env var must be defined") unless ENV['DD_API_KEY'] 
+abort("DD_APP_KEY env var must be defined") unless ENV['DD_APP_KEY'] 
 
-def print_usage 
+gopts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--backup-dir', '-d', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--name-filter-regex', '-f', GetoptLong::REQUIRED_ARGUMENT ],
+)
+opts = {}
+gopts.each { |p, a| opts[p] = a }
+
+def print_usage(error = nil)
+  puts "ERROR: #{error}\n" if error
   puts "Datadog Backup CLI - Dump Datadog dashboards, screenboards and monitors to JSON backups"
   puts "Usage:"
   puts "#{$0} --help        - Display the help message"
-  puts "#{$0} --config      - The yaml configuration file to use. Defaults to 'datadog-config.yaml'"
+  puts "#{$0} --backup-dir <dir> --name-filter-regex <regex>"
   exit 1
 end
 
-config_file = "datadog-config.yml"
-opts.each do |opt, arg|
-  case opt
-  when '--help'
-    print_usage
-  when '--config'
-    config_file = arg
+print_usage if opts['--help']
+backup_dir = opts['--backup-dir'] or print_usage("--backup-dir missing")
+name_filter_regex =
+  if opts['--name-filter-regex']
+    Regexp.new(opts['--name-filter-regex'])
+  else
+    print_usage("--name-filter-regex missing")
   end
-end
 
-config_yaml = YAML.load_file(config_file) or abort("Could not load configuration file #{config_file}")
+datadog = DatadogManagement.new(
+  ENV['DD_API_KEY'],
+  ENV['DD_APP_KEY'],
+  backup_dir,
+  name_filter_regex)
 
-teams = config_yaml['teams']
-teams.keys.each do |team|
-  logger.info("=> Backing up Datadog team : \'#{team}\'")
-
-  team_config = config_yaml['teams'][team]
-  backup_dir = team_config['backup_dir'] or abort("backup_dir not found in the configuration file")
-  name_filter_regex = Regexp.new(team_config['backup_name_filter_regex'])
-
-  datadog = DatadogManagement.new(
-    team,
-    team_config['apikey'],
-    team_config['appkey'],
-    backup_dir,
-    name_filter_regex)
-
-  datadog.backup_screenboards()
-  datadog.backup_dashboards()
-  datadog.backup_monitors()
-end
+datadog.backup_screenboards()
+datadog.backup_dashboards()
+datadog.backup_monitors()

@@ -21,95 +21,73 @@ require_relative 'datadog_management'
 
 logger = Logger.new(STDOUT)
 
-opts = GetoptLong.new(
+abort("DD_API_KEY env var must be defined") unless ENV['DD_API_KEY'] 
+abort("DD_APP_KEY env var must be defined") unless ENV['DD_APP_KEY'] 
+
+gopts = GetoptLong.new(
   [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
   
-  [ '--config', '-c', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--team', '-t', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--object', '-o', GetoptLong::REQUIRED_ARGUMENT ],
   [ '--file', '-f', GetoptLong::REQUIRED_ARGUMENT ],
-  [ '--altname', '-a', GetoptLong::OPTIONAL_ARGUMENT ],
+  [ '--alt-name', '-a', GetoptLong::OPTIONAL_ARGUMENT ],
 )
 
-def print_usage 
+opts = {}
+gopts.each { |p, a| opts[p] = a }
+
+def print_usage(error = nil)
+  puts "ERROR: #{error}\n" if error
     puts "Datadog Restore CLI - Restore Datadog dashboards, screenboards and monitors from JSON backups"
     puts "Usage: #{$0} --help        - Display the help message"
-    puts "Usage: #{$0} [--config <yaml file>] --object {dashboard|screenboard|monitor} --file ./SomeObject.json [--altname <name>]"
+    puts "Usage: #{$0} --object {dashboard|screenboard|monitor} --file ./SomeObject.json [--alt-name <name>]"
     exit 1
 end
   
-config_file = "datadog-config.yml"
+object = opts['--object'] or print_usage("--object missing")
+file = opts['--file'] or print_usage("--file missing")
+alt_name = opts['--alt-name']
 
-opts.each do |opt, arg|
-  case opt
-    when '--help'
-      print_usage
+datadog = DatadogManagement.new(
+  ENV['DD_API_KEY'],
+  ENV['DD_APP_KEY'])
 
-    when '--config'
-      config_file = arg
 
-    when '--object'
-      @object = arg
+logger.info("Restoring #{object} from backup file #{file}")
 
-    when '--file'
-      @filename = arg
+payload = JSON.parse(File.read(file))
 
-    when '--altname'
-      @altname = arg
+case object
 
-  end
-end
+when 'dashboard'
 
-unless @object && @filename
-    print_usage
-end 
-
-config_yaml = YAML.load_file(config_file) or abort("Could not load configuration file #{config_file}")
-
-teams = config_yaml['teams']
-teams.keys.each do |team|
-logger.info("Restoring #{@object} to team #{team} from backup file #{@filename}")
-
-  datadog = DatadogManagement.new(
-    team,
-    config_yaml['teams'][team]['apikey'],
-    config_yaml['teams'][team]['appkey'])
-
-  payload = JSON.parse(File.read(@filename))
-
-  case @object
-
-    when 'dashboard'
-
-      if defined? @altname
-        logger.info("Restoring dashboard with the alternative name #{@altname}")
-        payload['dash']['title'] = @altname
-      end
-
-      datadog.restore_dashboard(payload['dash'])
-
-    when 'screenboard'
-
-      if defined? @altname
-        logger.info("Restoring screenboard with the alternative name #{@altname}")
-        payload['board_title'] = @altname
-      end
-
-      datadog.restore_screenboard(payload)
-
-    when 'monitor'
-
-      if defined? @altname
-        logger.info("Restoring screenboard with the alternative name #{@altname}")
-        payload['name'] = @altname
-      end
-
-      datadog.restore_monitor(payload)
-
-    else
-      puts "Error: Didnt get dashboard , screenboard, monitor"
-      exit 1
-
+  if defined? alt_name
+    logger.info("Restoring dashboard with the alternative name #{alt_name}")
+    payload['dash']['title'] = alt_name
   end
 
+  datadog.restore_dashboard(payload['dash'])
+
+when 'screenboard'
+
+  if defined? alt_name
+    logger.info("Restoring screenboard with the alternative name #{alt_name}")
+    payload['board_title'] = alt_name
+  end
+
+  datadog.restore_screenboard(payload)
+
+when 'monitor'
+
+  if defined? alt_name
+    logger.info("Restoring screenboard with the alternative name #{alt_name}")
+    payload['name'] = alt_name
+  end
+
+  datadog.restore_monitor(payload)
+
+else
+  puts "Error: Didnt get dashboard , screenboard, monitor"
+  exit 1
+
 end
+
