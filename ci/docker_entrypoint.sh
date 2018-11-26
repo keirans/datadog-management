@@ -21,7 +21,8 @@ cd /opt && \
 cd /meta-datadog-config
 git config user.name 'CZI Datadog Management'
 git config user.email '<>'
-git commit --all --message 'Backup of latest Datadog state'
+git add --all
+git commit --message 'Backup of latest Datadog state'
 git push origin HEAD
 
 
