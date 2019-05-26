@@ -4,7 +4,7 @@ GEM
     dogapi (1.28.0)
       multi_json
     json (2.1.0)
-    logger (1.2.8)
+    logger (1.3.0)
     multi_json (1.12.2)
 
 PLATFORMS
